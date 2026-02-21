@@ -252,7 +252,32 @@
   color: var(--text-primary);
 }
 
-.chart-body { margin: 0 -8px; }
+.chart-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.chart-hl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.hl-label {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.hl-val { font-weight: 500; }
+
+.chart-body {
+  border-radius: 8px;
+  overflow: hidden;
+}
 
 .chart-loading {
   height: 320px;
