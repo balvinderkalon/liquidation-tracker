@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { createChart, ColorType, CrosshairMode, LineStyle } from 'lightweight-charts'
+import { createChart, ColorType, CrosshairMode, LineStyle, CandlestickSeries, HistogramSeries } from 'lightweight-charts'
 
 const BINANCE_API = 'https://fapi.binance.com'
 
@@ -65,7 +65,7 @@ export default function PriceChart() {
       handleScroll: { vertTouchDrag: false },
     })
 
-    const candleSeries = chart.addCandlestickSeries({
+    const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#00e676',
       downColor: '#ff3b5c',
       borderUpColor: '#00e676',
@@ -74,7 +74,7 @@ export default function PriceChart() {
       wickDownColor: '#ff3b5c88',
     })
 
-    const volumeSeries = chart.addHistogramSeries({
+    const volumeSeries = chart.addSeries(HistogramSeries, {
       priceFormat: { type: 'volume' },
       priceScaleId: 'volume',
     })
@@ -87,7 +87,6 @@ export default function PriceChart() {
     candleSeriesRef.current = candleSeries
     volumeSeriesRef.current = volumeSeries
 
-    // Resize handler
     const handleResize = () => {
       if (chartContainerRef.current) {
         chart.applyOptions({ width: chartContainerRef.current.clientWidth })
@@ -125,44 +124,27 @@ export default function PriceChart() {
           : 'rgba(255, 59, 92, 0.15)',
       }))
 
-      if (candleSeriesRef.current) {
-        candleSeriesRef.current.setData(candles)
-      }
-      if (volumeSeriesRef.current) {
-        volumeSeriesRef.current.setData(volumes)
-      }
+      if (candleSeriesRef.current) candleSeriesRef.current.setData(candles)
+      if (volumeSeriesRef.current) volumeSeriesRef.current.setData(volumes)
 
       if (candles.length > 0) {
         const latest = candles[candles.length - 1]
         const first = candles[0]
         setCurrentPrice(latest.close)
         setPriceChange(((latest.close - first.open) / first.open) * 100)
-
-        // 24h high/low from visible data
-        const highs = candles.map(c => c.high)
-        const lows = candles.map(c => c.low)
-        setHigh24h(Math.max(...highs))
-        setLow24h(Math.min(...lows))
+        setHigh24h(Math.max(...candles.map(c => c.high)))
+        setLow24h(Math.min(...candles.map(c => c.low)))
       }
 
-      // Scroll to latest
-      if (chartRef.current) {
-        chartRef.current.timeScale().scrollToRealTime()
-      }
-    } catch (e) {
-      console.error('Chart fetch error:', e)
-    }
+      if (chartRef.current) chartRef.current.timeScale().scrollToRealTime()
+    } catch (e) { console.error('Chart fetch error:', e) }
   }, [symbol, interval])
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  useEffect(() => { fetchData() }, [fetchData])
 
   // WebSocket for real-time candle updates
   useEffect(() => {
-    if (wsRef.current) {
-      wsRef.current.close()
-    }
+    if (wsRef.current) wsRef.current.close()
 
     const wsUrl = `wss://fstream.binance.com/ws/${symbol.toLowerCase()}@kline_${interval}`
     const ws = new WebSocket(wsUrl)
@@ -190,24 +172,14 @@ export default function PriceChart() {
             : 'rgba(255, 59, 92, 0.15)',
         }
 
-        if (candleSeriesRef.current) {
-          candleSeriesRef.current.update(candle)
-        }
-        if (volumeSeriesRef.current) {
-          volumeSeriesRef.current.update(volume)
-        }
-
+        if (candleSeriesRef.current) candleSeriesRef.current.update(candle)
+        if (volumeSeriesRef.current) volumeSeriesRef.current.update(volume)
         setCurrentPrice(candle.close)
       } catch (e) {}
     }
 
-    return () => {
-      ws.close()
-      wsRef.current = null
-    }
+    return () => { ws.close(); wsRef.current = null }
   }, [symbol, interval])
-
-  const base = getSymbolBase(symbol)
 
   return (
     <div className="chart-section-main">
